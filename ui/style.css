@@ -1,0 +1,920 @@
+/* Prom の見た目 (色・透明度・レイアウト)。
+   色と透明度を変えたいときは、下の「★ 色と透明度の設定」だけ編集してください。
+   保存して prom.exe を再起動すれば反映されます (再ビルド不要)。 */
+/* =====================================================================
+   ★ 色と透明度の設定 (見た目を変えたいときは、この :root だけ編集します)
+   ===================================================================== */
+:root {
+    /* 背景の不透明度: 0.65 = 透明度35%。小さいほど透けます (0.3〜1.0)。
+     ※ ウィンドウの半透明効果が有効なときだけ反映されます */
+    --glass: 0.45;
+    --bg-rgb: 5 5 7;
+    /* 半透明時の背景色 (R G B) 0〜255 */
+
+    /* 不透明のとき(半透明が使えない環境) の色 */
+    --bg: #07070a;
+    /* 背景 */
+    --panel: #101013;
+    /* カード・パネル */
+    --panel-2: #1a1a1f;
+    /* 入力欄・ボタン・グラフの下地 */
+    --border: #212127;
+    /* 罫線 */
+
+    --text: #e9e9ee;
+    --muted: #8c8e98;
+    /* 文字色 / 補助の文字色 */
+    --accent: #8ab4f8;
+    --on-accent: #10213d;
+    /* 強調色 / 強調色の上の文字 */
+    --accent-rgb: 138 180 248;
+    /* 選択行などに使う強調色 (R G B) */
+
+    /* 色の濃さ: 円グラフ・線グラフ・CPUバー・選択行・アイコン代わりの文字の色の濃さ。
+     小さいほど淡く(半透明に)なります (0.3〜1.0) */
+    --tint: 0.55;
+    --danger: #f28b82;
+    --on-danger: #3b0d0a;
+    --warn: #fdd663;
+
+    /* グラフの色 */
+    --c-cpu: #6ea8ff;
+    --c-mem: #b794f6;
+    --c-disk: #5fd6a0;
+    --c-gpu: #ff8fd1;
+    --c-net: #ffb86b;
+    --c-net2: #6ea8ff;
+    /* ネットワークの「送信」 */
+
+    --hover: rgba(255, 255, 255, .05);
+    --radius: 16px;
+    color-scheme: dark;
+}
+
+/* 半透明ウィンドウのときの色 (Cから通知されると html に glass が付きます) */
+html.glass {
+    --bg: rgb(var(--bg-rgb)/var(--glass));
+    --panel: rgb(255 255 255/.035);
+    --panel-2: rgb(255 255 255/.07);
+    --border: rgb(255 255 255/.07);
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", "Yu Gothic UI", "Meiryo UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 20px;
+    overflow: hidden;
+}
+
+/* ===== ヘッダー ===== */
+header {
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.brand {
+    margin-right: auto;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.01em
+}
+
+.btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    background: var(--panel-2)
+}
+
+.btn:active {
+    transform: scale(.96)
+}
+
+.btn svg {
+    width: 18px;
+    height: 18px
+}
+
+.btn.icon {
+    width: 36px;
+    padding: 0
+}
+
+.btn[aria-pressed="true"] {
+    border-color: var(--accent);
+}
+
+.btn.danger {
+    background: var(--danger);
+    border-color: transparent;
+    color: var(--on-danger)
+}
+
+.btn:disabled {
+    opacity: .38;
+    pointer-events: none
+}
+
+/* ===== 全体レイアウト: 左=パフォーマンス / 右=プロセス ===== */
+.main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: clamp(330px, 35%, 450px) minmax(0, 1fr);
+    gap: 14px
+}
+
+.left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 2px
+}
+
+.tile,
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius)
+}
+
+/* ----- 左のカード (クリックで円グラフが開く。開くのは1つだけ) ----- */
+.tile {
+    flex: none;
+    overflow: hidden
+}
+
+.t-head {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52%;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    cursor: pointer;
+    color: var(--text);
+}
+
+.t-head:hover {
+    background: var(--hover)
+}
+
+.t-head:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px
+}
+
+.t-head>span {
+    display: block;
+    min-width: 0
+}
+
+.t-name,
+.t-val,
+.t-sub {
+    display: block
+}
+
+.t-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600
+}
+
+.t-name::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    background: var(--c);
+    opacity: var(--tint)
+}
+
+.t-name::after {
+    content: "›";
+    margin-left: auto;
+    font-size: 16px;
+    line-height: 1;
+    transition: transform .15s
+}
+
+.tile.open .t-name::after {
+    transform: rotate(90deg)
+}
+
+.t-val {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap
+}
+
+.t-sub {
+    color: var(--muted);
+    font-size: 11px;
+    white-space: pre-line
+}
+
+.ov-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px
+}
+
+.ov-mini span {
+    display: flex;
+    align-items: center;
+    gap: 6px
+}
+
+.ov-mini i {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--c);
+    opacity: var(--tint)
+}
+
+.ov-mini b {
+    margin-left: auto;
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums
+}
+
+.graph {
+    width: 100%;
+    height: 58px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 100% 25%
+}
+
+.graph .fill {
+    fill: var(--c);
+    opacity: calc(var(--tint) * .3)
+}
+
+.graph .line {
+    fill: none;
+    stroke: var(--c);
+    stroke-opacity: var(--tint);
+    stroke-width: 1.6;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round
+}
+
+.graph .l2 {
+    stroke: var(--c-net2)
+}
+
+.tile.open .t-head {
+    grid-template-columns: minmax(0, 1fr)
+}
+
+.tile.open .graph,
+.tile.open .ov-mini {
+    display: none
+}
+
+.more {
+    display: none;
+    padding: 0 16px 14px
+}
+
+.tile.open .more {
+    display: block
+}
+
+/* ----- 円グラフ / リング ----- */
+.box {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center
+}
+
+.donut {
+    position: relative;
+    width: 150px;
+    height: 150px
+}
+
+.donut svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible
+}
+
+.trk {
+    fill: none;
+    stroke: var(--panel-2)
+}
+
+.seg,
+.arc {
+    fill: none;
+    cursor: pointer;
+    stroke-opacity: var(--tint)
+}
+
+.seg.hl,
+.arc.hl {
+    stroke-opacity: 1
+}
+
+.seg {
+    stroke-width: 13;
+    transition: stroke-dasharray .5s ease, stroke-dashoffset .5s ease, stroke-width .12s
+}
+
+.seg.hl {
+    stroke-width: 16
+}
+
+.arc {
+    stroke-width: 7;
+    transition: stroke-dasharray .5s ease, stroke-width .12s
+}
+
+.arc.hl {
+    stroke-width: 9
+}
+
+.dc {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 26px;
+    pointer-events: none;
+    text-align: center
+}
+
+.dc .big {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap
+}
+
+.rings .dc {
+    padding: 0 38px
+}
+
+.rings .dc .big {
+    font-size: 15px
+}
+
+.dc .lbl {
+    max-width: 100%;
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0
+}
+
+.legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 3px 6px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer
+}
+
+.legend li.hl {
+    background: var(--hover)
+}
+
+.legend li.static {
+    cursor: default
+}
+
+.dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    opacity: var(--tint)
+}
+
+.lico {
+    flex: none;
+    width: 16px;
+    height: 16px
+}
+
+.lico img {
+    display: block;
+    width: 16px;
+    height: 16px
+}
+
+.ln {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.lv {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap
+}
+
+/* ----- プロセス一覧 ----- */
+.panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden
+}
+
+.ptop {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 10px
+}
+
+.ptop h2 {
+    margin: 0 auto 0 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600
+}
+
+.ptop h2 small {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 400
+}
+
+.search {
+    position: relative;
+    width: min(260px, 40%)
+}
+
+.search svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    width: 15px;
+    height: 15px;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none
+}
+
+.search input {
+    width: 100%;
+    height: 36px;
+    padding: 0 14px 0 34px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font: inherit;
+    outline: none;
+}
+
+.search input:focus {
+    border-color: rgb(var(--accent-rgb) / .5)
+}
+
+.hdr {
+    padding-right: 14px;
+    border-bottom: 1px solid var(--border)
+}
+
+/* 14px = 一覧のスクロールバーの幅 */
+.scroll {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: scroll
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed
+}
+
+thead th {
+    padding: 10px 14px;
+    text-align: left;
+    background: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+thead th.num {
+    text-align: right
+}
+
+thead th:hover {
+    color: var(--text)
+}
+
+thead th.sorted {
+    color: var(--text)
+}
+
+thead th .arrow {
+    color: rgb(var(--accent-rgb) / var(--tint))
+}
+
+thead th .arrow {
+    display: inline-block;
+    width: 12px;
+    margin-left: 2px
+}
+
+tbody td {
+    height: 42px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+tbody tr:hover {
+    background: var(--hover)
+}
+
+tbody tr.sel {
+    background: rgb(var(--accent-rgb) / calc(var(--tint) * .16))
+}
+
+tbody tr.sel td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--accent-rgb) / var(--tint))
+}
+
+/* ---- 区分の見出し行 (アプリ / バックグラウンド / Windows) ---- */
+tbody tr.sec td {
+    height: 34px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    background: rgb(255 255 255/.035)
+}
+
+tbody tr.sec:hover {
+    background: none
+}
+
+tbody tr.sec .sc {
+    margin-left: 8px;
+    font-weight: 400;
+    opacity: .75
+}
+
+/* ---- グループ行 (Chrome.exe (12) など) の展開ボタン ---- */
+.chev {
+    flex: none;
+    position: relative;
+    width: 14px;
+    height: 16px;
+    margin-right: -4px;
+    visibility: hidden
+}
+
+.chev::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    border: solid transparent;
+    border-width: 4px 0 4px 6px;
+    border-left-color: var(--muted);
+    transition: transform .12s
+}
+
+tr.grp .chev {
+    visibility: visible;
+    cursor: pointer
+}
+
+tr.grp .chev:hover::before {
+    border-left-color: var(--text)
+}
+
+tr.grp.open .chev::before {
+    transform: rotate(90deg)
+}
+
+tr.grp {
+    cursor: default
+}
+
+tbody tr.child td {
+    background: rgb(255 255 255/.018)
+}
+
+tbody tr.child .name {
+    padding-left: 26px
+}
+
+td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums
+}
+
+td.path {
+    color: var(--muted);
+    font-size: 12px
+}
+
+.name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0
+}
+
+.nm {
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.ico {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center
+}
+
+.ico img {
+    display: block;
+    width: 24px;
+    height: 24px;
+    object-fit: contain
+}
+
+.ico.letter {
+    font-size: 12px;
+    font-weight: 700;
+    color: hsl(var(--h) 40% 78% / .85);
+    background: hsl(var(--h) 45% 55% / calc(var(--tint) * .2))
+}
+
+.cpuw {
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.cpuw .v {
+    width: 60px;
+    text-align: right;
+    font-variant-numeric: tabular-nums
+}
+
+.bar {
+    flex: 1;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--panel-2);
+    overflow: hidden
+}
+
+.bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+    opacity: var(--tint)
+}
+
+.warm .bar i {
+    background: var(--warn)
+}
+
+.hot .bar i {
+    background: var(--danger)
+}
+
+.hot .v {
+    color: var(--danger);
+    font-weight: 600
+}
+
+.foot {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 18px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border)
+}
+
+/* ----- メニュー / ダイアログ / トースト ----- */
+.menu {
+    position: fixed;
+    z-index: 50;
+    display: none;
+    min-width: 210px;
+    padding: 6px;
+    border-radius: 12px;
+    background: #121215;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .6)
+}
+
+.menu.open {
+    display: block
+}
+
+.menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer
+}
+
+.menu button:hover {
+    background: var(--hover)
+}
+
+.menu button.danger {
+    color: var(--danger)
+}
+
+.menu hr {
+    margin: 6px 4px;
+    border: 0;
+    border-top: 1px solid var(--border)
+}
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .62)
+}
+
+.scrim.open {
+    display: flex
+}
+
+.dialog {
+    width: min(430px, 90vw);
+    padding: 24px;
+    border-radius: 24px;
+    background: #121215;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .6)
+}
+
+.dialog h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    word-break: break-all
+}
+
+.dialog p {
+    margin: 0 0 22px;
+    color: var(--muted)
+}
+
+.dialog .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 200;
+    max-width: 80vw;
+    padding: 12px 20px;
+    border-radius: 14px;
+    background: #2a2a30;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    opacity: 0;
+    transform: translate(-50%, 16px);
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0)
+}
+
+.toast.error {
+    background: #b3261e
+}
+
+::-webkit-scrollbar {
+    width: 14px;
+    height: 14px
+}
+
+::-webkit-scrollbar-track {
+    background: transparent
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+    border: 4px solid transparent;
+    background-clip: content-box
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+    background-clip: content-box
+}
+
+@media (max-width:1180px) {
+    .path {
+        display: none
+    }
+}

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prom / TaskManager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header>
+    <div class="brand">Prom</div>
+    <button class="btn" id="glass" aria-pressed="true" title="半透明の切り替え">半透明</button>
+    <button class="btn" id="rate" title="更新間隔を切り替え (間隔を長くすると軽くなります)">2秒</button>
+    <button class="btn icon" id="pause" title="自動更新の一時停止 / 再開"></button>
+  </header>
+
+  <div class="main">
+    <aside class="left" id="left">
+      <section class="tile open" data-id="ov" style="--c:var(--accent)">
+        <button class="t-head" type="button" aria-expanded="true">
+          <span>
+            <span class="t-name">全体像</span>
+            <span class="ov-mini">
+              <span style="--c:var(--c-cpu)"><i></i>CPU<b id="ovCpu">–</b></span>
+              <span style="--c:var(--c-mem)"><i></i>メモリ<b id="ovMem">–</b></span>
+              <span style="--c:var(--c-disk)"><i></i>ディスク<b id="ovDisk">–</b></span>
+            </span>
+          </span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+
+      <section class="tile" data-id="cpu" style="--c:var(--c-cpu)">
+        <button class="t-head" type="button" aria-expanded="false">
+          <span><span class="t-name">CPU</span><span class="t-val" id="cpuV">–</span><span class="t-sub"
+              id="cpuSub"></span></span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+
+      <section class="tile" data-id="mem" style="--c:var(--c-mem)">
+        <button class="t-head" type="button" aria-expanded="false">
+          <span><span class="t-name">メモリ</span><span class="t-val" id="memV">–</span><span class="t-sub"
+              id="memSub"></span></span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+
+      <section class="tile" data-id="disk" style="--c:var(--c-disk)">
+        <button class="t-head" type="button" aria-expanded="false">
+          <span><span class="t-name">ディスク</span><span class="t-val" id="diskV">–</span><span class="t-sub"
+              id="diskSub"></span></span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+
+      <section class="tile" data-id="gpu" style="--c:var(--c-gpu)">
+        <button class="t-head" type="button" aria-expanded="false">
+          <span><span class="t-name">GPU</span><span class="t-val" id="gpuV">–</span><span class="t-sub"
+              id="gpuSub"></span></span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+
+      <section class="tile" data-id="net" style="--c:var(--c-net)">
+        <button class="t-head" type="button" aria-expanded="false">
+          <span><span class="t-name">ネットワーク</span><span class="t-val" id="netV">–</span><span class="t-sub"
+              id="netSub"></span></span>
+          <svg class="graph" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
+        </button>
+        <div class="more"></div>
+      </section>
+    </aside>
+
+    <section class="panel">
+      <div class="ptop">
+        <h2>プロセス <small id="count"></small></h2>
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <input id="q" type="search" placeholder="名前・PID・パスで検索" autocomplete="off" spellcheck="false">
+        </label>
+        <button class="btn danger" id="kill" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+          タスクを終了
+        </button>
+      </div>
+      <div class="hdr">
+        <table>
+          <colgroup>
+            <col style="width:32%">
+            <col style="width:76px">
+            <col style="width:180px">
+            <col style="width:90px">
+            <col style="width:110px">
+            <col class="path">
+          </colgroup>
+          <thead>
+            <tr>
+              <th data-k="name">名前<span class="arrow"></span></th>
+              <th data-k="pid" class="num">PID<span class="arrow"></span></th>
+              <th data-k="cpu">CPU<span class="arrow"></span></th>
+              <th data-k="gpu" class="num">GPU<span class="arrow"></span></th>
+              <th data-k="mem" class="num">メモリ<span class="arrow"></span></th>
+              <th data-k="path" class="path">パス<span class="arrow"></span></th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+      <div class="scroll">
+        <table>
+          <colgroup>
+            <col style="width:32%">
+            <col style="width:76px">
+            <col style="width:180px">
+            <col style="width:90px">
+            <col style="width:110px">
+            <col class="path">
+          </colgroup>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="foot"><span id="foot"></span><span id="state"></span></div>
+    </section>
+  </div>
+
+  <div class="menu" id="menu">
+    <button id="mOpen">ファイルの場所を開く</button>
+    <hr>
+    <button class="danger" id="mKill">プロセスを終了</button>
+    <button class="danger" id="mTree">プロセスツリーを終了</button>
+    <hr>
+    <button id="mRefresh">今すぐ更新</button>
+  </div>
+
+  <div class="scrim" id="scrim">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <h2 id="dlgTitle"></h2>
+      <p id="dlgBody"></p>
+      <div class="actions">
+        <button class="btn" id="dlgCancel">キャンセル</button>
+        <button class="btn danger" id="dlgOk">終了する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
